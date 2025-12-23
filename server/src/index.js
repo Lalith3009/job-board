@@ -5,6 +5,7 @@ require('dotenv').config();
 const initializeDatabase = require('./config/initDb');
 const authRoutes = require('./routes/auth');
 const jobsRoutes = require('./routes/jobs');
+const applicationsRoutes = require('./routes/applications');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -33,6 +34,7 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/jobs', jobsRoutes);
+app.use('/api/applications', applicationsRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -52,7 +54,7 @@ const startServer = async () => {
     await initializeDatabase();
     
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${5765}`);
+      console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
     });
   } catch (error) {

@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { jobsApi } from '../../services/api';
-import type { Job } from '../../types';
+import { jobsApi, applicationsApi } from '../../services/api';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft,
@@ -15,8 +14,34 @@ import {
   User,
   Loader2,
   Send,
-  Edit
+  Edit,
+  CheckCircle,
+  X
 } from 'lucide-react';
+
+interface Job {
+  id: number;
+  recruiterId: number;
+  title: string;
+  company: string;
+  description: string;
+  requirements?: string;
+  location: string;
+  jobType: string;
+  salaryMin?: number;
+  salaryMax?: number;
+  status: string;
+  remoteOk: boolean;
+  applicationCount: number;
+  createdAt: string;
+  updatedAt: string;
+  recruiter?: {
+    firstName: string;
+    lastName: string;
+    company: string;
+    email: string;
+  };
+}
 
 export default function JobDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -24,12 +49,19 @@ export default function JobDetailsPage() {
   const { user } = useAuth();
   const [job, setJob] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasApplied, setHasApplied] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [coverLetter, setCoverLetter] = useState('');
+  const [isApplying, setIsApplying] = useState(false);
 
   useEffect(() => {
     if (id) {
       fetchJob();
+      if (user?.role === 'student') {
+        checkApplicationStatus();
+      }
     }
-  }, [id]);
+  }, [id, user]);
 
   const fetchJob = async () => {
     try {
@@ -40,6 +72,31 @@ export default function JobDetailsPage() {
       navigate('/jobs');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const checkApplicationStatus = async () => {
+    try {
+      const { hasApplied } = await applicationsApi.checkApplication(parseInt(id!));
+      setHasApplied(hasApplied);
+    } catch (error) {
+      // Ignore error
+    }
+  };
+
+  const handleApply = async () => {
+    setIsApplying(true);
+    try {
+      await applicationsApi.applyToJob(parseInt(id!), coverLetter);
+      setHasApplied(true);
+      setShowApplyModal(false);
+      setCoverLetter('');
+      toast.success('Application submitted successfully!');
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'Failed to submit application';
+      toast.error(message);
+    } finally {
+      setIsApplying(false);
     }
   };
 
@@ -82,6 +139,7 @@ export default function JobDetailsPage() {
 
   const isOwner = user?.role === 'recruiter' && user?.id === job.recruiterId;
   const isStudent = user?.role === 'student';
+  const canApply = isStudent && job.status === 'open' && !hasApplied;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -178,13 +236,32 @@ export default function JobDetailsPage() {
           {isStudent && (
             <div className="card">
               <h3 className="font-semibold text-gray-900 mb-4">Interested in this job?</h3>
-              <button className="btn btn-primary w-full flex items-center justify-center gap-2">
-                <Send className="w-5 h-5" />
-                Apply Now
-              </button>
-              <p className="text-sm text-gray-500 mt-3 text-center">
-                Application feature coming soon!
-              </p>
+              {hasApplied ? (
+                <div className="flex items-center gap-2 text-green-600 bg-green-50 p-4 rounded-lg">
+                  <CheckCircle className="w-5 h-5" />
+                  <span className="font-medium">You've applied to this job</span>
+                </div>
+              ) : job.status !== 'open' ? (
+                <div className="text-gray-500 bg-gray-50 p-4 rounded-lg">
+                  This job is no longer accepting applications
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowApplyModal(true)}
+                  className="btn btn-primary w-full flex items-center justify-center gap-2"
+                >
+                  <Send className="w-5 h-5" />
+                  Apply Now
+                </button>
+              )}
+              {hasApplied && (
+                <Link
+                  to="/applications"
+                  className="block text-center text-sm text-blue-600 hover:underline mt-3"
+                >
+                  View your applications
+                </Link>
+              )}
             </div>
           )}
 
@@ -236,6 +313,70 @@ export default function JobDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* Apply Modal */}
+      {showApplyModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Apply to {job.title}</h2>
+                <button
+                  onClick={() => setShowApplyModal(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <p className="text-gray-600 mb-6">
+                at {job.company} • {job.location}
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="label">Cover Letter (Optional)</label>
+                  <textarea
+                    value={coverLetter}
+                    onChange={(e) => setCoverLetter(e.target.value)}
+                    className="input min-h-[200px]"
+                    placeholder="Tell the recruiter why you're a great fit for this role..."
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    A good cover letter can help you stand out from other applicants
+                  </p>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => setShowApplyModal(false)}
+                    className="btn btn-secondary flex-1"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleApply}
+                    disabled={isApplying}
+                    className="btn btn-primary flex-1 flex items-center justify-center gap-2"
+                  >
+                    {isApplying ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-5 h-5" />
+                        Submit Application
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

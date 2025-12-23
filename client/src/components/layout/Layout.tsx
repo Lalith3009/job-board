@@ -9,7 +9,8 @@ import {
   LogOut,
   Menu,
   X,
-  PlusCircle
+  PlusCircle,
+  Users
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -37,7 +38,7 @@ export default function Layout() {
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/jobs/manage', label: 'My Jobs', icon: Briefcase },
     { path: '/jobs/new', label: 'Post Job', icon: PlusCircle },
-    { path: '/applications', label: 'Applications', icon: FileText },
+    { path: '/applications/review', label: 'Applications', icon: Users },
     { path: '/profile', label: 'Profile', icon: User },
   ];
 

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AuthResponse, SignupData, LoginData, User, Job } from '../types';
+import type { AuthResponse, SignupData, LoginData, User, Job, Application } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -91,7 +91,6 @@ export interface CreateJobData {
 }
 
 export const jobsApi = {
-  // Get all jobs (public)
   getJobs: async (filters?: JobFilters): Promise<JobsResponse> => {
     const params = new URLSearchParams();
     if (filters?.search) params.append('search', filters.search);
@@ -105,33 +104,132 @@ export const jobsApi = {
     return response.data;
   },
 
-  // Get single job
   getJob: async (id: number): Promise<{ job: Job }> => {
     const response = await api.get<{ job: Job }>(`/jobs/${id}`);
     return response.data;
   },
 
-  // Get recruiter's jobs
   getMyJobs: async (): Promise<{ jobs: Job[] }> => {
     const response = await api.get<{ jobs: Job[] }>('/jobs/recruiter/my-jobs');
     return response.data;
   },
 
-  // Create job (recruiter only)
   createJob: async (data: CreateJobData): Promise<{ job: Job }> => {
     const response = await api.post<{ message: string; job: Job }>('/jobs', data);
     return response.data;
   },
 
-  // Update job (recruiter only)
   updateJob: async (id: number, data: Partial<CreateJobData & { status: string }>): Promise<{ job: Job }> => {
     const response = await api.put<{ message: string; job: Job }>(`/jobs/${id}`, data);
     return response.data;
   },
 
-  // Delete job (recruiter only)
   deleteJob: async (id: number): Promise<void> => {
     await api.delete(`/jobs/${id}`);
+  }
+};
+
+// Applications API
+export interface ApplicationWithJob {
+  id: number;
+  status: string;
+  coverLetter?: string;
+  resumeUrl?: string;
+  recruiterNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+  job: {
+    id: number;
+    title: string;
+    company: string;
+    location: string;
+    jobType: string;
+    status: string;
+  };
+  recruiter?: {
+    firstName: string;
+    lastName: string;
+  };
+}
+
+export interface ApplicationWithStudent {
+  id: number;
+  status: string;
+  coverLetter?: string;
+  resumeUrl?: string;
+  recruiterNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+  student: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    location?: string;
+    linkedin?: string;
+    github?: string;
+    bio?: string;
+  };
+  job?: {
+    id: number;
+    title: string;
+    company: string;
+  };
+}
+
+export const applicationsApi = {
+  // Student: Apply to a job
+  applyToJob: async (jobId: number, coverLetter?: string): Promise<{ application: Application }> => {
+    const response = await api.post<{ message: string; application: Application }>(
+      `/applications/jobs/${jobId}/apply`,
+      { coverLetter }
+    );
+    return response.data;
+  },
+
+  // Student: Get my applications
+  getMyApplications: async (): Promise<{ applications: ApplicationWithJob[] }> => {
+    const response = await api.get<{ applications: ApplicationWithJob[] }>('/applications/my-applications');
+    return response.data;
+  },
+
+  // Student: Check if applied to a job
+  checkApplication: async (jobId: number): Promise<{ hasApplied: boolean; application: Application | null }> => {
+    const response = await api.get<{ hasApplied: boolean; application: Application | null }>(
+      `/applications/check/${jobId}`
+    );
+    return response.data;
+  },
+
+  // Student: Withdraw application
+  withdrawApplication: async (id: number): Promise<void> => {
+    await api.delete(`/applications/${id}`);
+  },
+
+  // Recruiter: Get all applications for all jobs
+  getAllApplications: async (): Promise<{ applications: ApplicationWithStudent[] }> => {
+    const response = await api.get<{ applications: ApplicationWithStudent[] }>('/applications/recruiter/all');
+    return response.data;
+  },
+
+  // Recruiter: Get applications for a specific job
+  getJobApplications: async (jobId: number): Promise<{ job: Job; applications: ApplicationWithStudent[] }> => {
+    const response = await api.get<{ job: Job; applications: ApplicationWithStudent[] }>(
+      `/applications/job/${jobId}`
+    );
+    return response.data;
+  },
+
+  // Recruiter: Update application status
+  updateApplicationStatus: async (
+    id: number,
+    data: { status?: string; recruiterNotes?: string }
+  ): Promise<{ application: Application }> => {
+    const response = await api.put<{ message: string; application: Application }>(
+      `/applications/${id}/status`,
+      data
+    );
+    return response.data;
   }
 };
 

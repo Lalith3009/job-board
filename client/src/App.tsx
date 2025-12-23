@@ -11,6 +11,8 @@ import BrowseJobsPage from './pages/jobs/BrowseJobsPage';
 import JobDetailsPage from './pages/jobs/JobDetailsPage';
 import PostJobPage from './pages/jobs/PostJobPage';
 import MyJobsPage from './pages/jobs/MyJobsPage';
+import MyApplicationsPage from './pages/applications/MyApplicationsPage';
+import RecruiterApplicationsPage from './pages/applications/RecruiterApplicationsPage';
 
 function App() {
   return (
@@ -78,8 +80,27 @@ function App() {
               } 
             />
             
+            {/* Applications - Students */}
+            <Route 
+              path="/applications" 
+              element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <MyApplicationsPage />
+                </ProtectedRoute>
+              } 
+            />
+
+            {/* Applications - Recruiters */}
+            <Route 
+              path="/applications/review" 
+              element={
+                <ProtectedRoute allowedRoles={['recruiter']}>
+                  <RecruiterApplicationsPage />
+                </ProtectedRoute>
+              } 
+            />
+            
             {/* Placeholder routes */}
-            <Route path="/applications" element={<div className="card">Applications - Coming Soon</div>} />
             <Route path="/profile" element={<div className="card">Profile - Coming Soon</div>} />
           </Route>
 
