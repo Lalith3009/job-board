@@ -7,6 +7,10 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/auth/LoginPage';
 import SignupPage from './pages/auth/SignupPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
+import BrowseJobsPage from './pages/jobs/BrowseJobsPage';
+import JobDetailsPage from './pages/jobs/JobDetailsPage';
+import PostJobPage from './pages/jobs/PostJobPage';
+import MyJobsPage from './pages/jobs/MyJobsPage';
 
 function App() {
   return (
@@ -51,10 +55,30 @@ function App() {
             }
           >
             <Route path="/dashboard" element={<DashboardPage />} />
-            {/* Add more protected routes here */}
-            <Route path="/jobs" element={<div className="card">Browse Jobs - Coming Soon</div>} />
-            <Route path="/jobs/manage" element={<div className="card">Manage Jobs - Coming Soon</div>} />
-            <Route path="/jobs/new" element={<div className="card">Post New Job - Coming Soon</div>} />
+            
+            {/* Jobs - All Users */}
+            <Route path="/jobs" element={<BrowseJobsPage />} />
+            <Route path="/jobs/:id" element={<JobDetailsPage />} />
+            
+            {/* Jobs - Recruiters Only */}
+            <Route 
+              path="/jobs/new" 
+              element={
+                <ProtectedRoute allowedRoles={['recruiter']}>
+                  <PostJobPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/jobs/manage" 
+              element={
+                <ProtectedRoute allowedRoles={['recruiter']}>
+                  <MyJobsPage />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Placeholder routes */}
             <Route path="/applications" element={<div className="card">Applications - Coming Soon</div>} />
             <Route path="/profile" element={<div className="card">Profile - Coming Soon</div>} />
           </Route>

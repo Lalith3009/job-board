@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AuthResponse, SignupData, LoginData, User } from '../types';
+import type { AuthResponse, SignupData, LoginData, User, Job } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -27,7 +27,6 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // Optionally redirect to login
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
@@ -56,6 +55,83 @@ export const authApi = {
   updateProfile: async (data: Partial<User>): Promise<{ user: User }> => {
     const response = await api.put<{ message: string; user: User }>('/auth/profile', data);
     return response.data;
+  }
+};
+
+// Jobs API
+export interface JobsResponse {
+  jobs: Job[];
+  pagination: {
+    page: number;
+    limit: number;
+    totalCount: number;
+    totalPages: number;
+  };
+}
+
+export interface JobFilters {
+  search?: string;
+  jobType?: string;
+  location?: string;
+  remoteOk?: boolean;
+  page?: number;
+  limit?: number;
+}
+
+export interface CreateJobData {
+  title: string;
+  company?: string;
+  description: string;
+  requirements?: string;
+  location: string;
+  jobType: 'full-time' | 'part-time' | 'internship' | 'contract';
+  salaryMin?: number;
+  salaryMax?: number;
+  remoteOk?: boolean;
+}
+
+export const jobsApi = {
+  // Get all jobs (public)
+  getJobs: async (filters?: JobFilters): Promise<JobsResponse> => {
+    const params = new URLSearchParams();
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.jobType) params.append('jobType', filters.jobType);
+    if (filters?.location) params.append('location', filters.location);
+    if (filters?.remoteOk) params.append('remoteOk', 'true');
+    if (filters?.page) params.append('page', filters.page.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+
+    const response = await api.get<JobsResponse>(`/jobs?${params.toString()}`);
+    return response.data;
+  },
+
+  // Get single job
+  getJob: async (id: number): Promise<{ job: Job }> => {
+    const response = await api.get<{ job: Job }>(`/jobs/${id}`);
+    return response.data;
+  },
+
+  // Get recruiter's jobs
+  getMyJobs: async (): Promise<{ jobs: Job[] }> => {
+    const response = await api.get<{ jobs: Job[] }>('/jobs/recruiter/my-jobs');
+    return response.data;
+  },
+
+  // Create job (recruiter only)
+  createJob: async (data: CreateJobData): Promise<{ job: Job }> => {
+    const response = await api.post<{ message: string; job: Job }>('/jobs', data);
+    return response.data;
+  },
+
+  // Update job (recruiter only)
+  updateJob: async (id: number, data: Partial<CreateJobData & { status: string }>): Promise<{ job: Job }> => {
+    const response = await api.put<{ message: string; job: Job }>(`/jobs/${id}`, data);
+    return response.data;
+  },
+
+  // Delete job (recruiter only)
+  deleteJob: async (id: number): Promise<void> => {
+    await api.delete(`/jobs/${id}`);
   }
 };
 
